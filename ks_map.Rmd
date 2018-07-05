@@ -1,0 +1,442 @@
+---
+title: "Kansas Choropleth Map"
+author: "Mark White | markwhiteii@gmail.com"
+output: html_document
+---
+## Preparation
+This document will explain how to use the `ks_map` function, which will return a choropleth map at the county level for Kansas. Before I go any further, please note that this function requires the following packages: `ggplot2`, `ggmap`, `maps`, `dplyr`, and `tidyr`. If you want to load the function into your current R session, you can use the following code:  
+```{r eval=FALSE}
+source("path/to/the/file/ks_map.R")
+```
+
+Where "path/to/the/file" is the directory where you have stored the R file `ks_map.R`. After this, the function will be loaded into your session to use.  
+It also requires a certain data structure: A variable needs to be labeled "fips" (with five-digit county FIPS codes) or labeled "county" (with county names, in all lowercase); additionally, it requires some numeric vector whose values you will use to fill in the choropleth map. Consider the following data frame:  
+```{r echo=FALSE}
+test <- structure(list(fips = c(20001L, 20003L, 20005L, 20007L, 20009L, 
+20011L, 20013L, 20015L, 20017L, 20019L, 20021L, 20023L, 20025L, 
+20027L, 20029L, 20031L, 20033L, 20035L, 20037L, 20039L, 20041L, 
+20043L, 20045L, 20047L, 20049L, 20051L, 20053L, 20055L, 20057L, 
+20059L, 20061L, 20063L, 20065L, 20067L, 20069L, 20071L, 20073L, 
+20075L, 20077L, 20079L, 20081L, 20083L, 20085L, 20087L, 20089L, 
+20091L, 20093L, 20095L, 20097L, 20099L, 20101L, 20103L, 20105L, 
+20107L, 20109L, 20111L, 20113L, 20115L, 20117L, 20119L, 20121L, 
+20123L, 20125L, 20127L, 20129L, 20131L, 20133L, 20135L, 20137L, 
+20139L, 20141L, 20143L, 20145L, 20147L, 20149L, 20151L, 20153L, 
+20155L, 20157L, 20159L, 20161L, 20163L, 20165L, 20167L, 20169L, 
+20171L, 20173L, 20175L, 20177L, 20179L, 20181L, 20183L, 20185L, 
+20187L, 20189L, 20191L, 20193L, 20195L, 20197L, 20199L, 20201L, 
+20203L, 20205L, 20207L, 20209L), county = c("allen", "anderson", 
+"atchison", "barber", "barton", "bourbon", "brown", "butler", 
+"chase", "chautauqua", "cherokee", "cheyenne", "clark", "clay", 
+"cloud", "coffey", "comanche", "cowley", "crawford", "decatur", 
+"dickinson", "doniphan", "douglas", "edwards", "elk", "ellis", 
+"ellsworth", "finney", "ford", "franklin", "geary", "gove", "graham", 
+"grant", "gray", "greeley", "greenwood", "hamilton", "harper", 
+"harvey", "haskell", "hodgeman", "jackson", "jefferson", "jewell", 
+"johnson", "kearny", "kingman", "kiowa", "labette", "lane", "leavenworth", 
+"lincoln", "linn", "logan", "lyon", "mcpherson", "marion", "marshall", 
+"meade", "miami", "mitchell", "montgomery", "morris", "morton", 
+"nemaha", "neosho", "ness", "norton", "osage", "osborne", "ottawa", 
+"pawnee", "phillips", "pottawatomie", "pratt", "rawlins", "reno", 
+"republic", "rice", "riley", "rooks", "rush", "russell", "saline", 
+"scott", "sedgwick", "seward", "shawnee", "sheridan", "sherman", 
+"smith", "stafford", "stanton", "stevens", "sumner", "thomas", 
+"trego", "wabaunsee", "wallace", "washington", "wichita", "wilson", 
+"woodson", "wyandotte"), var = c(1.23619647956401, -1.48327783529193, 
+0.941160611651903, -0.000306308734895449, -2.35701937059426, 
+0.780290212752153, -0.684528107589744, 0.460297332591367, 0.997881210937526, 
+-0.182053721783113, -0.962777703081498, -0.793372591556885, 0.805264304842305, 
+2.1322782010303, -0.619092702964711, 1.09713428910968, 0.480785876337689, 
+0.188536326339713, -0.496633132354645, -2.2749217020475, 1.90179900839715, 
+0.178616836929948, -0.421215137313855, 1.4509949721619, 1.21378832557749, 
+-0.467428388338565, 0.357682064077741, -0.436087546259839, -1.48660995177772, 
+1.34159147409459, 1.5275291012385, 1.76267723638579, -0.18879239195155, 
+-0.398396559574486, -0.149683489917971, 1.66394169314063, 0.966677876710641, 
+0.942932838248788, 1.10602247898477, 0.709809930400219, 1.20896533357174, 
+0.374604589994026, -0.93890707286237, 0.0922491428363782, -0.305724975379666, 
+0.834377343288286, 0.404760792920772, -1.90591085996674, 0.967814209816125, 
+-0.809446554484276, -1.53098022445649, -1.57957162297418, 2.73139277923255, 
+-0.101342137329772, -0.383418467521369, -0.116304913834934, -0.842699017073173, 
+0.136942147440168, 0.269345006515965, 0.121269123452011, -0.964957979388424, 
+0.584822470066673, -0.501914500674576, -0.61374883453698, -0.799759113371108, 
+1.70552001758449, -0.43980805560222, 0.961650253072463, -1.09489070671637, 
+0.105725485421112, 1.15283563797453, 0.526833421323243, -2.03541399398487, 
+0.543064451254425, -0.156238655226518, 1.19901467508584, -0.147624950591267, 
+0.579769716789271, -1.93466341088192, 0.293577175735174, 0.857276273350038, 
+-0.466713864935341, -2.62542859919677, 1.82145533103225, -0.298834045695033, 
+-0.475107801352856, -0.486133007406444, 2.1049929489969, -1.4100658283587, 
+-2.400003441231, 0.0720129640120917, 0.770906228895149, 1.24601046406764, 
+-1.71479509077467, -0.334936038067315, 0.477348931969111, -1.24294003493987, 
+-1.4836689733247, -1.09423614308282, -0.209534511620175, -0.297224393305073, 
+0.164551863826042, 1.14214309779217, 0.404470629859315, -0.0880278082222004
+)), class = "data.frame", .Names = c("fips", "county", "var"), row.names = c(NA, 
+-105L))
+```
+```{r}
+head(test)
+```
+
+There can certainly be more variables than the required ones, but the function only interacts with these two.  
+
+
+## Using the function
+The function looks like this:  
+
+```{r eval=FALSE}
+ks_map(data, key, variable, label="", lowcolor="#56B1F7", highcolor="#132B43", title="")
+```
+
+The parameters are:  
+1. `data` = the data frame containing the variables you want to map.  
+2. `key` = either "fips" or "county." The function will throw an error if the key is not set to one of these two. It should be specified as a character string.  
+3. `variable` = the variable you want to use as the fill for each county. This should be supplied as a character string.  
+4. `label` = the legend title you wish to have; the label for your variable. This defaults to being blank.  
+5. `lowcolor` = the color you wish to represent the minimum value of `variable`. This takes a hex value (or a string known by R) as a character string. It defaults to the `ggplot2` default.  
+6. `highcolor` = the color you wish to represent the maximum value of `variable`. This takes a hex value (or a string known by R) as a character string. It defaults to the `ggplot2` default.  
+7. `title` = the title that will go above your map. This defaults to being blank.  
+
+## Examples  
+
+```{r echo=FALSE, warning=FALSE}
+ks_map <- function(data, key, variable, label="", lowcolor="#56B1F7", highcolor="#132B43", title="") {
+  
+  # loading packages
+  suppressPackageStartupMessages(require(ggplot2))
+  suppressPackageStartupMessages(require(ggmap))
+  suppressPackageStartupMessages(require(maps))
+  suppressPackageStartupMessages(require(dplyr))
+  suppressPackageStartupMessages(require(tidyr))
+  
+  # get mapping data
+  mapdata <- map_data("county", "kansas")
+  
+  # combine with fips codes
+  data("county.fips", envir=environment())
+  mapdata <- county.fips %>%
+    separate(polyname, c("region", "subregion"), "[,]") %>% 
+    filter(region=="kansas") %>% 
+    select(-region) %>% 
+    full_join(mapdata, by="subregion") %>% 
+    rename(county=subregion) %>% 
+    select(-region)
+  
+  # fips is integer
+  # county is character
+  
+  if (key=="fips") {
+    mapdata <- left_join(mapdata, data, by="fips")
+    plot <- ggplot(mapdata, aes(x=long, y=lat, group=group, fill=get(variable))) +
+      geom_polygon() +
+      coord_map() +
+      theme_void() +
+      scale_fill_gradient(name=label, low=lowcolor, high=highcolor) + 
+      labs(title=title)
+    return(plot)
+  } else if (key=="county") {
+    mapdata <- left_join(mapdata, data, by="county")
+    plot <- ggplot(mapdata, aes(x=long, y=lat, group=group, fill=get(variable))) +
+      geom_polygon() +
+      coord_map() +
+      theme_void() +
+      scale_fill_gradient(name=label, low=lowcolor, high=highcolor) +
+      labs(title=title)
+    return(plot)
+  } else {
+    stop("Please specify key as either 'county' or 'fips'")
+  }
+}
+```
+```{r warning=FALSE}
+ks_map(data=test, key="fips", variable="var", label="Random Number")
+```
+
+```{r warning=FALSE}
+ks_map(data=test, key="county", variable="var", lowcolor="yellow", highcolor="red")
+```
+
+```{r warning=FALSE}
+ks_map(data=test, key="county", variable="var", lowcolor="#E2D200", highcolor="#46ACC8")
+```
+
+## Grouping by another variable
+
+Let's say that you want make a map for various subgroups. This will require a number of different variables for each group. Let's say that I wanted to make a choropleth map for an `outcome` people high in socioeconomic status (`hi_ses`) and those low in socioeconomic status (`lo_ses`). What you will need to do is get county-level summary statistics for those high and low in socioeconomic status for the outcome of interest. I would suggest using `dplyr` to first `filter` rows by the grouping variable (in this case, socioeconomic status), then `group_by` the county variable, and then `summarise` the outcome variable of interest by taking the mean. What you will need is a data frame that looks something like this:  
+
+```{r echo=FALSE}
+test2 <- structure(list(fips = c(20001L, 20003L, 20005L, 20007L, 20009L, 
+20011L, 20013L, 20015L, 20017L, 20019L, 20021L, 20023L, 20025L, 
+20027L, 20029L, 20031L, 20033L, 20035L, 20037L, 20039L, 20041L, 
+20043L, 20045L, 20047L, 20049L, 20051L, 20053L, 20055L, 20057L, 
+20059L, 20061L, 20063L, 20065L, 20067L, 20069L, 20071L, 20073L, 
+20075L, 20077L, 20079L, 20081L, 20083L, 20085L, 20087L, 20089L, 
+20091L, 20093L, 20095L, 20097L, 20099L, 20101L, 20103L, 20105L, 
+20107L, 20109L, 20111L, 20113L, 20115L, 20117L, 20119L, 20121L, 
+20123L, 20125L, 20127L, 20129L, 20131L, 20133L, 20135L, 20137L, 
+20139L, 20141L, 20143L, 20145L, 20147L, 20149L, 20151L, 20153L, 
+20155L, 20157L, 20159L, 20161L, 20163L, 20165L, 20167L, 20169L, 
+20171L, 20173L, 20175L, 20177L, 20179L, 20181L, 20183L, 20185L, 
+20187L, 20189L, 20191L, 20193L, 20195L, 20197L, 20199L, 20201L, 
+20203L, 20205L, 20207L, 20209L), county = structure(c(1L, 2L, 
+3L, 4L, 5L, 6L, 7L, 8L, 9L, 10L, 11L, 12L, 13L, 14L, 15L, 16L, 
+17L, 18L, 19L, 20L, 21L, 22L, 23L, 24L, 25L, 26L, 27L, 28L, 29L, 
+30L, 31L, 32L, 33L, 34L, 35L, 36L, 37L, 38L, 39L, 40L, 41L, 42L, 
+43L, 44L, 45L, 46L, 47L, 48L, 49L, 50L, 51L, 52L, 53L, 54L, 55L, 
+56L, 59L, 57L, 58L, 60L, 61L, 62L, 63L, 64L, 65L, 66L, 67L, 68L, 
+69L, 70L, 71L, 72L, 73L, 74L, 75L, 76L, 77L, 78L, 79L, 80L, 81L, 
+82L, 83L, 84L, 85L, 86L, 87L, 88L, 89L, 90L, 91L, 92L, 93L, 94L, 
+95L, 96L, 97L, 98L, 99L, 100L, 101L, 102L, 103L, 104L, 105L), .Label = c("allen", 
+"anderson", "atchison", "barber", "barton", "bourbon", "brown", 
+"butler", "chase", "chautauqua", "cherokee", "cheyenne", "clark", 
+"clay", "cloud", "coffey", "comanche", "cowley", "crawford", 
+"decatur", "dickinson", "doniphan", "douglas", "edwards", "elk", 
+"ellis", "ellsworth", "finney", "ford", "franklin", "geary", 
+"gove", "graham", "grant", "gray", "greeley", "greenwood", "hamilton", 
+"harper", "harvey", "haskell", "hodgeman", "jackson", "jefferson", 
+"jewell", "johnson", "kearny", "kingman", "kiowa", "labette", 
+"lane", "leavenworth", "lincoln", "linn", "logan", "lyon", "marion", 
+"marshall", "mcpherson", "meade", "miami", "mitchell", "montgomery", 
+"morris", "morton", "nemaha", "neosho", "ness", "norton", "osage", 
+"osborne", "ottawa", "pawnee", "phillips", "pottawatomie", "pratt", 
+"rawlins", "reno", "republic", "rice", "riley", "rooks", "rush", 
+"russell", "saline", "scott", "sedgwick", "seward", "shawnee", 
+"sheridan", "sherman", "smith", "stafford", "stanton", "stevens", 
+"sumner", "thomas", "trego", "wabaunsee", "wallace", "washington", 
+"wichita", "wilson", "woodson", "wyandotte"), class = "factor"), 
+    hi_ses = c(1.72665930862017, 1.45837590265354, -0.378519526729889, 
+    1.22147531258893, -0.724457103973997, -1.71878392168498, 
+    0.351680379234078, -0.815822819465371, -0.284591773201282, 
+    2.07459890698319, -1.9953532119346, 0.906065097302851, -0.0234608656139087, 
+    -1.10828584592087, 1.49207448816334, 0.0484491444735011, 
+    0.872807862579146, 0.554297947941471, 0.338374881932672, 
+    0.514935087698052, 1.65076572531775, -0.185144488093167, 
+    1.03351558281073, 0.359364068661844, 0.942005693299444, 0.484420047992716, 
+    0.671124419142089, 0.278157011198299, 0.8103764239478, -1.47645576017448, 
+    0.995162501270595, 0.775791692566925, -0.318347360218116, 
+    -0.775420847582048, -0.394254779866801, -1.329351561436, 
+    1.06439725469159, 0.439733514767733, -0.307923913749518, 
+    1.85525183052909, -0.859391957311724, 1.02701784296435, -0.624706442302626, 
+    -0.689655024370255, -1.61774882302704, 1.54607442364571, 
+    1.11238414131309, -0.613696238822204, 0.296852871779109, 
+    -1.613562679847, -0.670642016993482, -0.498863019991931, 
+    0.0877387911525978, -0.435633403055897, 0.586621815648503, 
+    0.534762374591918, -0.152444653421897, -0.10441353854692, 
+    0.71505849572771, -0.812169304798066, -0.757158214416756, 
+    -0.648169822954972, -0.158115738228882, 1.54598137804726, 
+    -0.432148631406719, -0.841115183399853, 0.652626252184632, 
+    -2.20918024501205, -0.698291198934609, 2.63015127880954, 
+    -0.893349425216927, 0.401698771196266, 0.107913286892714, 
+    -0.430759823953706, -1.32096829923126, 1.20837471948551, 
+    -0.490902579529604, 0.854613757743624, 0.528245008371581, 
+    1.17475969242643, 0.492600437094792, 1.22406029344198, 0.148966614525161, 
+    -2.44464651558092, 0.697697693711275, 1.0130381532317, -0.160849979993946, 
+    0.329714444466648, 2.17876933118937, 0.543606423427445, -0.508440435994495, 
+    0.0988212681150299, 1.71793405531653, 0.22490908923474, -0.618951258102157, 
+    -0.188900999459352, 1.2138665422128, 0.914577860298713, -2.39790787025811, 
+    0.317824440864189, -1.72816965570394, -0.0643938511823621, 
+    -0.470478180794244, -0.514350873981823, 0.277815000806818
+    ), lo_ses = c(-0.841933388163867, 0.440995647891301, 0.480672652753863, 
+    0.244805580463896, -1.26823974010138, -0.112917705674734, 
+    0.126146646960804, -0.372590778977174, 1.60124166681227, 
+    -1.91862979875793, -0.608975386479685, 1.31688774811659, 
+    -0.328825132188148, -0.417550423191478, -1.40410094427655, 
+    0.670001424985639, 1.19742221663832, 1.04521276329149, -0.240402212984555, 
+    -0.902848051911383, -0.192939845818034, -0.666755599619609, 
+    -0.230277258040786, 1.07199452444705, 0.0717217189754472, 
+    0.145573795293045, 0.873217337618178, -0.281008658365016, 
+    -1.31149670172633, -0.558565921471031, 1.24054905098849, 
+    0.12086434160804, -0.0264483686738963, 1.36186605690147, 
+    1.7349377322422, -0.65160480638131, -0.516578955603869, -1.68489389493277, 
+    -1.32744112958743, -0.981512920745456, 0.253926866349762, 
+    1.53890500527252, 1.0795114970677, 0.119726632247579, 1.1909740130774, 
+    1.47666100052976, 0.886339310054854, -1.53074991354535, 1.06999199157656, 
+    0.693118016639682, -1.39547571222189, -0.316997186362641, 
+    -2.02062606176875, 0.047098568131111, 0.036022528213158, 
+    -0.455879861875762, 0.42214193571233, -0.0438173239418304, 
+    0.115797330051268, -1.66348221674852, 0.861960959392852, 
+    -0.418667775593134, -0.34476301792, -0.0663500511361117, 
+    -1.10344904495868, -1.39050545071599, 0.329706618180923, 
+    -0.720365584306073, -2.3684508967389, 0.711199494129016, 
+    0.654408914652932, 0.703581379918576, 2.72353375869906, 2.09478279815392, 
+    -1.72233385372346, 0.403615966353365, 0.119586156939906, 
+    0.850529529423529, 0.273947944107418, -0.202719094209444, 
+    0.939292320922867, -0.51656059509811, -0.368623500328651, 
+    -0.08801294638035, -1.81312197519375, -0.49074434206828, 
+    -0.598863199335055, -0.584080526722358, -1.34868379019521, 
+    1.48890235794477, 0.579246551350518, 0.511474655477056, -0.759625287403274, 
+    0.833979499193763, -0.581230512468666, 0.721348696575538, 
+    -1.45398793937183, -0.00122139252682868, 1.40119315001109, 
+    -1.04997421629827, -0.319156041474552, 1.07185898969992, 
+    0.362417511092278, 1.13028070022342, 0.847538295503974)), .Names = c("fips", 
+"county", "hi_ses", "lo_ses"), row.names = c(NA, -105L), class = "data.frame")
+```
+```{r}
+head(test2)
+```
+
+You can create two different plots, one for each of the groups, by making using `ks_map` twice:  
+
+```{r}
+plot1 <- ks_map(data=test2, key="county", variable="lo_ses", lowcolor="white", highcolor="blue", title="High")
+plot2 <- ks_map(data=test2, key="county", variable="hi_ses", lowcolor="white", highcolor="red", title="Low")
+```
+
+First, note the warning message you get: Internally to the function, it merges your data with the data used to plot. In one data frame, `county` was a character vector; in the other, it was a `factor`. R is telling us that it had to convert one of them to a character to join the two data frames. That is OK; it warning is nothing we have to worry about, since we don't necessarily need `county` as a factor variable.  
+
+You could use these plots as different image files, if you wanted to. But what if you wanted them in the same image file? To display these in the same plot, you can use the `gridExtra` package to put two `ggplot` objects into one plot:  
+
+```{r}
+gridExtra::grid.arrange(plot1, plot2, ncol=1, top="Random Number, by SES")
+```
+
+The arguments to `grid.arrange` are pretty simple: You give it the plots you want, and then you tell it how many columns (`ncol`) and rows (`nrow`) that you want. The `top` argument simply gives it a title. More examples using `gridExtra` can be found at the [vignette for the package on the CRAN website](https://cran.r-project.org/web/packages/gridExtra/vignettes/arrangeGrob.html).  
+
+## Details about the function
+This automates the procedure of generating choropleth maps, but this automation means that you have a tradeoff with less flexibility. In case you find yourself consistently wanting the plots to look different, I will explain the code so that you can edit it how you wish.  
+
+```{r eval=FALSE}
+ks_map <- function(data, key, variable, label="", lowcolor="#56B1F7", highcolor="#132B43", title="") {
+```
+
+This first line just defines the parameters. The "", "#132B43", "#56B1F7", and "" found in the last four arguments are what the function defaults to if no argument is given. That means `data`, `key`, and `varable` are the only parameters that *must* be given an argument.  
+
+```{r eval=FALSE}
+  # loading packages
+  suppressPackageStartupMessages(require(ggplot2))
+  suppressPackageStartupMessages(require(ggmap))
+  suppressPackageStartupMessages(require(maps))
+  suppressPackageStartupMessages(require(dplyr))
+  suppressPackageStartupMessages(require(tidyr))
+```
+
+These lines load the necessary packages. Some of these give you messages upon starting them, so I have surrounded each with the function that will suppress these package startup messages.  
+
+```{r eval=FALSE}
+  # get mapping data
+  mapdata <- map_data("county", "kansas")
+```
+
+This loads the county-level data for kansas from the `ggplot2` package. It contains county names and the points for plotting the county lines.  
+
+```{r eval=FALSE}  
+  # combine with fips codes
+  data("county.fips", envir=environment())
+```
+
+Sometimes you may have FIPS codes, but not county names. This call to `data` loads the `"county.fips"` data from the `maps` package.
+
+```{r eval=FALSE}
+  mapdata <- county.fips %>%
+    separate(polyname, c("region", "subregion"), "[,]") %>% 
+    filter(region=="kansas") %>% 
+    select(-region) %>% 
+    full_join(mapdata, by="subregion") %>% 
+    rename(county=subregion) %>% 
+    select(-region)
+```
+
+This `dplyr` pipe chain takes `county.fips` data and merges it with the `mapdata`.  
+
+```{r eval=FALSE}
+  if (key=="fips") {
+    mapdata <- left_join(mapdata, data, by="fips")
+    plot <- ggplot(mapdata, aes(x=long, y=lat, group=group, fill=get(variable))) +
+      geom_polygon() +
+      coord_map() +
+      theme_void() +
+      scale_fill_gradient(name=label, low=lowcolor, high=highcolor) + 
+      labs(title=title)
+    return(plot)
+```
+
+This is where the mapping happens. It first starts with an `if` statement. If you specify the `key` as `fips`, then it executes this code. First, it will join the data you specify with the data used for mapping (`mapdata`). Then it plots this using the `mapdata` (which now includes all of your data). It specifies the x and y axes as the latitude and longitude values, respectively. The grouping variable is also in `mapdata`, and it tells `ggplot2` which dots to connect to draw the county lines. Lastly, `fill` tells `ggplot2` that it will be filling in these counties with whatever variable you specified.  
+
+It uses `geom_polygon` to draw the counties, `coord_map` to make sure Kansas has the right dimensions, `theme_void` to get rid of all axes and the default `ggplot2` background, `scale_fill_gradient` to specify the label you are giving your variable in the legend (as well as the colors). Finally, it makes a call to `labs` to make the title name. It then returns the plot you just made.  
+
+```{r eval=FALSE}
+  } else if (key=="county") {
+    mapdata <- left_join(mapdata, data, by="county")
+    plot <- ggplot(mapdata, aes(x=long, y=lat, group=group, fill=get(variable))) +
+      geom_polygon() +
+      coord_map() +
+      theme_void() +
+      scale_fill_gradient(name=label, low=lowcolor, high=highcolor) +
+      labs(title=title)
+    return(plot)
+```
+
+This does the same thing as above, except now it is using county names instead of FIPS codes.  
+
+```{r eval=FALSE}
+  } else {
+    stop("Please specify key as either 'county' or 'fips'")
+  }
+}
+
+```
+
+The last part of the function throws an error. If you do not specify the key as either `"county"` or `"fips"`, then you get an error, because the function does not know where to join the mapping data with your data.  
+
+For example, there are different types of projections you can use with `coord_map`, [see the documentation](http://ggplot2.tidyverse.org/reference/coord_map.html) for `coord_map` for details.  
+
+By default, `coord_map` uses as `"mercator"` projection (i.e., "equally spaced straight meridians, conformal, straight compass courses"). You could also specify another projection. For instance, "`stereographic`" (i.e., "conformal, projected from opposite pole"):  
+
+```{r eval=FALSE}
+ggplot(mapdata, aes(x=long, y=lat, group=group, fill=get(variable))) +
+      geom_polygon() +
+      coord_map("stereographic") + # specify a different projection here
+      theme_void() +
+      scale_fill_gradient(name=label, low=lowcolor, high=highcolor) +
+      labs(title=title)
+```
+
+If you put this into the function, you would get a map that looks like this:  
+
+```{r echo=FALSE}
+ks_map <- function(data, key, variable, label="", lowcolor="#56B1F7", highcolor="#132B43", title="") {
+  
+  # loading packages
+  suppressPackageStartupMessages(require(ggplot2))
+  suppressPackageStartupMessages(require(ggmap))
+  suppressPackageStartupMessages(require(maps))
+  suppressPackageStartupMessages(require(dplyr))
+  suppressPackageStartupMessages(require(tidyr))
+  
+  # get mapping data
+  mapdata <- map_data("county", "kansas")
+  
+  # combine with fips codes
+  data("county.fips", envir=environment())
+  mapdata <- county.fips %>%
+    separate(polyname, c("region", "subregion"), "[,]") %>% 
+    filter(region=="kansas") %>% 
+    select(-region) %>% 
+    full_join(mapdata, by="subregion") %>% 
+    rename(county=subregion) %>% 
+    select(-region)
+  
+  if (key=="fips") {
+    mapdata <- left_join(mapdata, data, by="fips")
+    plot <- ggplot(mapdata, aes(x=long, y=lat, group=group, fill=get(variable))) +
+      geom_polygon() +
+      coord_map("stereographic") +
+      theme_void() +
+      scale_fill_gradient(name=label, low=lowcolor, high=highcolor) + 
+      labs(title=title)
+    return(plot)
+  } else if (key=="county") {
+    mapdata <- left_join(mapdata, data, by="county")
+    plot <- ggplot(mapdata, aes(x=long, y=lat, group=group, fill=get(variable))) +
+      geom_polygon() +
+      coord_map("stereographic") +
+      theme_void() +
+      scale_fill_gradient(name=label, low=lowcolor, high=highcolor) +
+      labs(title=title)
+    return(plot)
+  } else {
+    stop("Please specify key as either 'county' or 'fips'")
+  }
+}
+```
+```{r warning=FALSE}
+ks_map(test, "county", "var")
+```
