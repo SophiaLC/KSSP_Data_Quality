@@ -2,8 +2,8 @@
 channel <- 
   odbcConnect(
     "Biosense_Platform", 
-    "BIOSENSE\\scrossenks", 
-    "fuu9QQIOH"
+    "BIOSENSE\\lskywalker01", 
+    "xwingred5"
     )
 
 dtMonth <- "08"
